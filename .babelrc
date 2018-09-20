@@ -1,0 +1,14 @@
+{
+  "presets": [
+    [
+      "@babel/preset-env",
+      {
+        "useBuiltIns": "usage",
+        "debug": true
+      }
+    ]
+  ],
+  "plugins": [
+    "transform-object-rest-spread"
+  ]
+}

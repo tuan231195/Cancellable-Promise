@@ -1,0 +1,23 @@
+{
+  "name": "cancellable-promise",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "budo src/index.js:bundle.js --live --open -- -t [ babelify --sourceType module ]"
+  },
+  "author": "Tuan Nguyen <vdtn359@gmail.com>",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "7.0.0",
+    "@babel/preset-env": "7.0.0",
+    "babel-core": "7.0.0-bridge.0",
+    "babel-plugin-transform-object-rest-spread": "6.26.0",
+    "babelify": "10.0.0",
+    "budo": "11.3.2"
+  },
+  "dependencies": {
+    "@babel/polyfill": "7.0.0"
+  },
+  "browserslist": "last 2 Chrome versions"
+}
