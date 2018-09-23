@@ -1,59 +1,89 @@
-class PromiseWrapper {
-  constructor(promise, canceller) {
-    this.promise = promise;
-    this.canceller = canceller;
-  }
+import { TnPromise } from './tn-promise';
+import * as angular from 'angular';
 
-  cancel() {
-    this.canceller.resolve();
-  }
+const testPromise = new TnPromise(function(resolve, reject) {
+	let counter = 0;
+	const timeout = setTimeout(() => {
+		resolve(5);
+		clearInterval(interval);
+	}, 3000);
 
-  then(resolvedFunction, rejectedFunction = () => {
-  }) {
-    const promise = this.promise.then(resolvedFunction, rejectedFunction);
-    return new PromiseWrapper(promise, this.canceller);
-  }
+	const interval = setInterval(() => {
+		this.setProgress(counter++);
+	}, 1000);
 
-  catch(rejectedFunction) {
-    const promise = this.promise.catch(rejectedFunction);
-    return new PromiseWrapper(promise, this.canceller);
-  }
+	this.onCancelled(() => {
+		clearInterval(interval);
+		clearTimeout(timeout);
+		reject(1);
+	});
+})
+	.then(console.log)
+	.catch(console.error);
 
-  finally(finalFunction) {
-    const promise = this.promise.finally(finalFunction);
-    return new PromiseWrapper(promise, this.canceller);
-  }
-}
+testPromise.onProgress(console.log);
 
-angular.module("my-app", [])
-       .controller("MyController", function MyController($scope, $q, $http) {
-         let promise;
-         $scope.sendRequest = function() {
-           promise =
-             $http.get("https://www.mocky.io/v2/5185415ba171ea3a00704eed?mocky-delay=5000ms")
-                  .then(console.log);
-         };
+angular
+	.module('my-app', [])
+	.controller('MyController', function MyController($scope, $q, $http) {
+		let promise;
+		$scope.sendRequest = function() {
+			promise = TnPromise.all([
+				$http.get(
+					'https://www.mocky.io/v2/5185415ba171ea3a00704eed?mocky-delay=5000ms'
+				),
+				$http.get(
+					'https://www.mocky.io/v2/5185415ba171ea3a00704eed?mocky-delay=500ms'
+				),
+			])
+				.then(console.log)
+				.catch(console.error);
+		};
 
-         $scope.cancelRequest = function() {
-           promise.cancel();
-         };
-       })
-       .config(["$provide", function($provide) {
-         $provide.decorator("$http", [
-           "$delegate", "$q",
-           function httpDecorator($delegate, $q) {
-             $delegate.get = function(url, config = {}) {
-               const canceller = $q.defer();
-               config = Object.assign({
-                 method: "GET",
-                 url
-               }, config, {
-                 timeout: canceller.promise
-               });
-               return new PromiseWrapper($delegate(config), canceller);
-             };
+		$scope.cancelRequest = function() {
+			promise.cancel();
+		};
 
-             return $delegate;
-           }
-         ]);
-       }]);
+		$scope.cancelPromise = function() {
+			testPromise.cancel();
+		};
+	})
+	.config([
+		'$provide',
+		function($provide) {
+			$provide.decorator('$http', [
+				'$delegate',
+				'$q',
+				function httpDecorator($delegate, $q) {
+					$delegate.get = function(url, config = {}) {
+						const canceller = $q.defer();
+						let promise;
+						config = Object.assign(
+							{
+								method: 'GET',
+								url,
+							},
+							config,
+							{
+								timeout: canceller.promise,
+								uploadEventHandlers: {
+									progress: e => {
+										if (e.lengthComputable && promise) {
+											promise.setProgress(
+												(e.loaded / e.total) * 100
+											);
+										}
+									},
+								},
+							}
+						);
+						promise = TnPromise.wrap($delegate(config));
+						promise.onCancelled(canceller.resolve);
+						return promise;
+					};
+
+					return $delegate;
+				},
+			]);
+		},
+	]);
