@@ -2,7 +2,7 @@ export class TnPromise {
 	constructor(executor) {
 		this._cancelListeners = [];
 		this._progressListeners = [];
-		this._promise = new Promise(executor.bind(this));
+		this._promise = new Promise((resolve, reject) => executor({ resolve, reject, promise: this }));
 	}
 
 	get isCancelled() {
@@ -19,14 +19,14 @@ export class TnPromise {
 		}
 		this._isCancelled = true;
 		this._cancelListeners.forEach(cancelListener =>
-			cancelListener(cancelResult)
+			cancelListener(cancelResult),
 		);
 	}
 
 	setProgress(progress) {
 		this._progress = progress;
 		this._progressListeners.forEach(progressListener =>
-			progressListener(this._progress)
+			progressListener(this._progress),
 		);
 	}
 
@@ -63,7 +63,7 @@ export class TnPromise {
 		promise.onCancelled(cancelResult =>
 			promises
 				.filter(promise => promise instanceof TnPromise)
-				.forEach(promise => promise.cancel(cancelResult))
+				.forEach(promise => promise.cancel(cancelResult)),
 		);
 		return promise;
 	}
@@ -73,7 +73,7 @@ export class TnPromise {
 		promise.onCancelled(cancelResult =>
 			promises
 				.filter(promise => promise instanceof TnPromise)
-				.forEach(promise => promise.cancel(cancelResult))
+				.forEach(promise => promise.cancel(cancelResult)),
 		);
 		return promise;
 	}
@@ -82,8 +82,9 @@ export class TnPromise {
 		if (promise instanceof TnPromise) {
 			return promise;
 		}
-		const executor = (onResolved, onRejected) =>
-			promise.then(onResolved).catch(onRejected);
-		return new TnPromise(executor);
+		return new TnPromise(({ resolve, reject }) => {
+			promise.then(resolve)
+				   .catch(reject);
+		});
 	}
 }
