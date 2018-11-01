@@ -46,6 +46,11 @@ function newCancellablePromise({ $http, $q, url, config }) {
 		promise.onCancelled(canceller.resolve);
 		$http(overriddenConfig)
 			.then(resolve)
-			.catch(reject);
+			.catch((error = {}) => {
+				if (promise.isCancelled) {
+					return;
+				}
+				reject(error);
+			});
 	});
 }
